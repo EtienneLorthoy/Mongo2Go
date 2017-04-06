@@ -1,5 +1,6 @@
 ﻿using System;
 using Mongo2Go.Helper;
+using System.Collections.Generic;
 
 namespace Mongo2Go
 {
@@ -32,8 +33,14 @@ namespace Mongo2Go
         public static MongoDbRunner Start(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null)
         {
             dataDirectory += Guid.NewGuid().ToString().Replace("-", "").Substring(0, 20);
+            
+            var mongoBinaryLocator = new MongoBinaryLocator(new List<IMongoBinaryLocator>
+            {
+                new NugetPackageMongoBinaryLocator (searchPatternOverride),
+                new CurrentExecFolderMongoBinaryLocator()
+            });
 
-            return new MongoDbRunner(PortPool.GetInstance, new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory);
+            return new MongoDbRunner(PortPool.GetInstance, new FileSystem(), new MongoDbProcessStarter(), mongoBinaryLocator, dataDirectory);
         }
 
         internal static MongoDbRunner StartUnitTest(IPortPool portPool, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin)
@@ -50,7 +57,13 @@ namespace Mongo2Go
         /// </remarks>
         public static MongoDbRunner StartForDebugging(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null)
         {
-            return new MongoDbRunner(new ProcessWatcher(), new PortWatcher(), new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory);
+            var mongoBinaryLocator = new MongoBinaryLocator(new List<IMongoBinaryLocator>
+            {
+                new NugetPackageMongoBinaryLocator (searchPatternOverride),
+                new CurrentExecFolderMongoBinaryLocator()
+            });
+
+            return new MongoDbRunner(new ProcessWatcher(), new PortWatcher(), new FileSystem(), new MongoDbProcessStarter(), mongoBinaryLocator, dataDirectory);
         }
 
         internal static MongoDbRunner StartForDebuggingUnitTest(IProcessWatcher processWatcher, IPortWatcher portWatcher, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin)

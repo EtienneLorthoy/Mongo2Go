@@ -51,6 +51,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper\CurrentExecFolderMongoBinaryLocator.cs" />
     <Compile Include="Helper\FileSystem.cs" />
     <Compile Include="Helper\IFileSystem.cs">
       <DependentUpon>FileSystem.cs</DependentUpon>
@@ -74,6 +75,7 @@
     <Compile Include="Helper\MongoDbProcessStarter.cs" />
     <Compile Include="Helper\MongoImportExport.cs" />
     <Compile Include="Helper\NativeMethods.cs" />
+    <Compile Include="Helper\NugetPackageMongoBinaryLocator.cs" />
     <Compile Include="Helper\PortPool.cs" />
     <Compile Include="Helper\ProcessControl.cs" />
     <Compile Include="Helper\ProcessWatcher.cs" />

@@ -1,70 +1,49 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Mongo2Go.Helper
 {
-
+    /// <summary>
+    /// Will forward binary directory from first successfull of all given IMongoBinaryLocator
+    /// </summary>
     public class MongoBinaryLocator : IMongoBinaryLocator
     {
-        private readonly string _nugetPrefix = Path.Combine("packages", "Mongo2Go*");
-        public const string DefaultWindowsSearchPattern = @"tools\mongodb-win32*\bin";
-        public const string DefaultLinuxSearchPattern = "tools/mongodb-linux*/bin";
-        public const string DefaultOsxSearchPattern = "tools/mongodb-osx*/bin";
-        private string _binFolder = string.Empty;
-        private readonly string _searchPattern;
+        private readonly IList<IMongoBinaryLocator> _locatorStrategies;
+        private readonly Lazy<string> _binFolder;
 
-        public MongoBinaryLocator (string searchPatternOverride)
+        public MongoBinaryLocator(List<IMongoBinaryLocator> locatorStrategies)
         {
-            if (string.IsNullOrEmpty(searchPatternOverride))
+            _locatorStrategies = locatorStrategies;
+            _binFolder = new Lazy<string>(ResolveBinariesDirectory);
+        }
+
+        public string Directory => _binFolder.Value;
+
+        private string ResolveBinariesDirectory()
+        {
+            var exceptionList = new List<MonogDbBinariesNotFoundException>();
+
+            foreach (var strat in _locatorStrategies)
             {
-                var operatingSystem = Environment.OSVersion.Platform;
-                switch (operatingSystem)
+                try
                 {
-                    case PlatformID.MacOSX:
-                        _searchPattern = DefaultOsxSearchPattern;
-                        break;
-                    case PlatformID.Unix:
-                        _searchPattern = DefaultLinuxSearchPattern;
-                        break;
-                    default:
-                        _searchPattern = DefaultWindowsSearchPattern;
-                        break;
+                    return strat.Directory;
+                }
+                catch (MonogDbBinariesNotFoundException ex)
+                {
+                    exceptionList.Add(ex);
+
+                    if (_locatorStrategies.IndexOf(strat) == _locatorStrategies.Count - 1)
+                    {
+                        throw new AggregateException("Unable to find Mongo binaries. See inner exceptions for more info", exceptionList);
+                    }
                 }
             }
-            else
-            {
-                _searchPattern = searchPatternOverride;
-            }
-        }
 
-        public string Directory {
-            get {
-                if (string.IsNullOrEmpty(_binFolder)){
-                    return _binFolder = ResolveBinariesDirectory ();
-                } else {
-                    return _binFolder;
-                }
-            }
-        }
-
-        private string ResolveBinariesDirectory ()
-        {
-            var binariesFolder =
-                // First try path when installed via nuget
-                FolderSearch.CurrentExecutingDirectory().FindFolderUpwards(Path.Combine(_nugetPrefix, _searchPattern)) ??
-                // second try path when started from solution
-                FolderSearch.CurrentExecutingDirectory().FindFolderUpwards(_searchPattern);
-
-            if (binariesFolder == null) {
-                throw new MonogDbBinariesNotFoundException (string.Format (
-                    "Could not find Mongo binaries using the search pattern of \"{0}\". We walked up the directories {1} levels from {2} and {3}.  You can override the search pattern when calling MongoDbRunner.Start.  We have detected the OS as {4}",
-                    _searchPattern,
-                    FolderSearch.MaxLevelOfRecursion,
-                    FolderSearch.CurrentExecutingDirectory(),
-                    Path.Combine(_nugetPrefix, _searchPattern),
-                    Environment.OSVersion.Platform));
-            }
-            return binariesFolder;
+            // Unreachable code
+            return null;
         }
     }
 }
