@@ -35,7 +35,8 @@ namespace Mongo2Go.Helper
             {
                 if (!File.Exists(Path.Combine(binariesFolderCandidate, exeFilename + ".exe")))
                 {
-                    throw new MonogDbBinariesNotFoundException(string.Format("Could not find Mongo binaries using the 'current execution dir' search pattern. If you're running on a CI make sure you use DeploymentItem decorator Resolved current dir \"{0}\".", binariesFolderCandidate));
+                    throw new MonogDbBinariesNotFoundException(
+                        $"Could not find Mongo binaries using the 'current execution dir' search pattern. If you're running on a CI make sure you use DeploymentItem decorator Resolved current dir \"{binariesFolderCandidate}\".");
                 }
             }
 
