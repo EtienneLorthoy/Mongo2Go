@@ -29,16 +29,16 @@ namespace Mongo2Go
         /// On dispose: kills them and deletes their data directory
         /// </summary>
         /// <remarks>Should be used for integration tests</remarks>
-        public static MongoDbRunner Start(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null)
+        public static MongoDbRunner Start(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null, StorageEngineType storageEngineType = StorageEngineType.VersionDefault)
         {
             dataDirectory += Guid.NewGuid().ToString().Replace("-", "").Substring(0, 20);
 
-            return new MongoDbRunner(PortPool.GetInstance, new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory);
+            return new MongoDbRunner(PortPool.GetInstance, new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory, storageEngineType);
         }
 
-        internal static MongoDbRunner StartUnitTest(IPortPool portPool, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin)
+        internal static MongoDbRunner StartUnitTest(IPortPool portPool, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin, StorageEngineType storageEngineType)
         {
-            return new MongoDbRunner(portPool, fileSystem, processStarter, mongoBin, MongoDbDefaults.DataDirectory);
+            return new MongoDbRunner(portPool, fileSystem, processStarter, mongoBin, MongoDbDefaults.DataDirectory, storageEngineType);
         }
 
         /// <summary>
@@ -48,14 +48,14 @@ namespace Mongo2Go
         /// Should be used for local debugging only
         /// WARNING: one single instance on one single machine is not a suitable setup for productive environments!!!
         /// </remarks>
-        public static MongoDbRunner StartForDebugging(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null)
+        public static MongoDbRunner StartForDebugging(string dataDirectory = MongoDbDefaults.DataDirectory, string searchPatternOverride = null, StorageEngineType storageEngineType = StorageEngineType.VersionDefault)
         {
-            return new MongoDbRunner(new ProcessWatcher(), new PortWatcher(), new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory);
+            return new MongoDbRunner(new ProcessWatcher(), new PortWatcher(), new FileSystem(), new MongoDbProcessStarter(), new MongoBinaryLocator(searchPatternOverride), dataDirectory, storageEngineType);
         }
 
         internal static MongoDbRunner StartForDebuggingUnitTest(IProcessWatcher processWatcher, IPortWatcher portWatcher, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin)
         {
-            return new MongoDbRunner(processWatcher, portWatcher, fileSystem, processStarter, mongoBin, MongoDbDefaults.DataDirectory);
+            return new MongoDbRunner(processWatcher, portWatcher, fileSystem, processStarter, mongoBin, MongoDbDefaults.DataDirectory, StorageEngineType.VersionDefault);
         }
 
         /// <summary>
@@ -63,7 +63,6 @@ namespace Mongo2Go
         /// </summary>
         public void Import(string database, string collection, string inputFile, bool drop)
         {
-
             MongoImportExport.Import(_mongoBin.Directory, _port, database, collection, inputFile, drop);
         }
 
@@ -72,14 +71,13 @@ namespace Mongo2Go
         /// </summary>
         public void Export(string database, string collection, string outputFile)
         {
-
             MongoImportExport.Export(_mongoBin.Directory, _port, database, collection, outputFile);
         }
 
         /// <summary>
         /// usage: local debugging
         /// </summary>
-        private MongoDbRunner(IProcessWatcher processWatcher, IPortWatcher portWatcher, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin, string dataDirectory)
+        private MongoDbRunner(IProcessWatcher processWatcher, IPortWatcher portWatcher, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin, string dataDirectory, StorageEngineType storageEngineType)
         {
             _fileSystem = fileSystem;
             _port = MongoDbDefaults.DefaultPort;
@@ -102,7 +100,7 @@ namespace Mongo2Go
 
             _fileSystem.CreateFolder(dataDirectory);
             _fileSystem.DeleteFile(@"{0}{1}{2}".Formatted(dataDirectory, System.IO.Path.DirectorySeparatorChar.ToString(), MongoDbDefaults.Lockfile));
-            _mongoDbProcess = processStarter.Start(_mongoBin.Directory, dataDirectory, _port, true);
+            _mongoDbProcess = processStarter.Start(_mongoBin.Directory, dataDirectory, storageEngineType, _port, true);
 
             State = State.Running;
         }
@@ -110,7 +108,7 @@ namespace Mongo2Go
         /// <summary>
         /// usage: integration tests
         /// </summary>
-        private MongoDbRunner(IPortPool portPool, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin, string dataDirectory)
+        private MongoDbRunner(IPortPool portPool, IFileSystem fileSystem, IMongoDbProcessStarter processStarter, IMongoBinaryLocator mongoBin, string dataDirectory, StorageEngineType storageEngineType)
         {
             _fileSystem = fileSystem;
             _port = portPool.GetNextOpenPort();
@@ -124,7 +122,7 @@ namespace Mongo2Go
             _fileSystem.CreateFolder(_dataDirectoryWithPort);
             _fileSystem.DeleteFile(@"{0}{1}{2}".Formatted(_dataDirectoryWithPort, System.IO.Path.DirectorySeparatorChar.ToString(), MongoDbDefaults.Lockfile));
 
-            _mongoDbProcess = processStarter.Start(_mongoBin.Directory, _dataDirectoryWithPort, _port);
+            _mongoDbProcess = processStarter.Start(_mongoBin.Directory, _dataDirectoryWithPort, storageEngineType, _port);
 
             State = State.Running;
         }
